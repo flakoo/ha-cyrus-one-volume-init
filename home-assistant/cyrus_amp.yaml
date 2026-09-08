@@ -19,6 +19,10 @@
 input_boolean:
   cyrus_amp_startup_lock:
     name: "Cyrus amp startup lock"
+    # While this helper is on, the ESP32 owns the BLE connection. If you use
+    # the cyrus-one-hass-with-lock fork of the HA BLE integration, enter this
+    # entity in its options (Configure -> startup lock helper) so the
+    # integration also waits instead of racing the ESP32 for the connection.
 
 # Single switch to turn the amplifier on/off from the UI.
 # Power-off just cuts the plug; power-on runs the volume script below.
