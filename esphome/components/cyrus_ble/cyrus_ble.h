@@ -60,7 +60,7 @@ class CyrusBleComponent : public esphome::Component,
 
   esphome::binary_sensor::BinarySensor *status_sensor_{nullptr};
   State state_{State::IDLE};
-  int target_volume_{46};
+  int target_volume_{36};
 
   BleScanner scanner_;
   BleConnection connection_;

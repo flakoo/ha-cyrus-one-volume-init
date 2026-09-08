@@ -5,8 +5,8 @@ ESPHome firmware + Home Assistant package that set the volume of a
 powered on.
 
 Both amplifiers have a mechanical power switch and **do not remember the last
-volume setting** — after every power-on they come back at an unpredictable
-level. This project restores a fixed, safe volume automatically and
+volume setting** — after every power-on they come back at volume 0 (silent).
+This project restores a fixed, safe volume automatically and
 deterministically.
 
 ## Why not just the Home Assistant BLE integration?
@@ -61,7 +61,7 @@ entity (Shelly Plug, TP-Link, Zigbee plug, ...) drives it — see
    replace `switch.amplifier_plug` with your smart plug entity.
 3. Set the volume in `home-assistant/cyrus_amp.yaml`
    (`esphome.cyrus_bt_over_wifi_controller_set_cyrus_volume`, absolute 0-90;
-   46 is the default). You can also call the service from any other automation
+   36 is the default). You can also call the service from any other automation
    or script.
 
 ## Status LED (M5Stack Atom S3U)

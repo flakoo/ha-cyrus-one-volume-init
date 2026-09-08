@@ -63,10 +63,10 @@ script:
       - service: switch.turn_on
         target:
           entity_id: switch.amplifier_plug
-      # Absolute volume 0-90 (46 = roughly -33 dB on the Cyrus scale).
+      # Absolute volume 0-90 (36 = roughly -40 dB on the Cyrus scale).
       - service: esphome.cyrus_bt_over_wifi_controller_set_cyrus_volume
         data:
-          volume: 46
+          volume: 36
       # The ESP32 scans for the two MAC advertisements of the amplifier,
       # connects over BLE and writes the volume. It pulses
       # binary_sensor.<cyrus_device>_cyrus_volume_set when done
