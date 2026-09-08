@@ -1,0 +1,82 @@
+# Home Assistant package: set the volume of a Cyrus ONE / ONE HD amplifier
+# after it is powered on.
+#
+# The amplifier is powered through any smart plug integrated into HA
+# (Shelly, TP-Link, Zigbee, ...). The plug entity is the ONLY thing you need
+# to adjust - replace `switch.amplifier_plug` everywhere in this file.
+#
+# Volume is set over BLE by an ESPHome device running the firmware from the
+# `esphome/` directory of this repository (service `set_cyrus_volume`,
+# absolute volume 0-90). Do NOT use the Home Assistant BLE integration for
+# the power-on volume: its connection time is unbounded (7-40 s). The
+# ESPHome controller connects directly and finishes in a stable ~8 s.
+#
+# Include this file from configuration.yaml, e.g.:
+#   homeassistant:
+#     packages: !include_dir_named packages
+# and place this file as packages/cyrus_amp.yaml.
+
+input_boolean:
+  cyrus_amp_startup_lock:
+    name: "Cyrus amp startup lock"
+
+# Single switch to turn the amplifier on/off from the UI.
+# Power-off just cuts the plug; power-on runs the volume script below.
+template:
+  - switch:
+      - name: "Cyrus Amp"
+        unique_id: cyrus_amp_power_switch
+        state: "{{ is_state('switch.amplifier_plug', 'on') }}"
+        availability: "{{ states('switch.amplifier_plug') not in ['unknown', 'unavailable'] }}"
+        turn_on:
+          - service: script.cyrus_amp_turn_on_with_volume
+        turn_off:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.amplifier_plug
+
+automation:
+  # Covers the case where the plug is switched on outside of HA
+  # (physical button on the plug, vendor app). The lock prevents a double
+  # run when the script below is what turned the plug on.
+  - alias: "Cyrus amp powered on"
+    id: cyrus_amp_powered_on
+    trigger:
+      - platform: state
+        entity_id: switch.amplifier_plug
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: input_boolean.cyrus_amp_startup_lock
+        state: "off"
+    action:
+      - service: script.cyrus_amp_turn_on_with_volume
+
+script:
+  cyrus_amp_turn_on_with_volume:
+    alias: "Turn on Cyrus amp and set volume"
+    mode: single
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.cyrus_amp_startup_lock
+      - service: switch.turn_on
+        target:
+          entity_id: switch.amplifier_plug
+      # Absolute volume 0-90 (46 = roughly -33 dB on the Cyrus scale).
+      - service: esphome.cyrus_bt_over_wifi_controller_set_cyrus_volume
+        data:
+          volume: 46
+      # The ESP32 scans for the two MAC advertisements of the amplifier,
+      # connects over BLE and writes the volume. It pulses
+      # binary_sensor.<cyrus_device>_cyrus_volume_set when done
+      # (normally ~8 s after power-on; 30 s timeout as a safety net).
+      - wait_for_trigger:
+          - platform: state
+            entity_id: binary_sensor.cyrus_bt_over_wifi_controller_cyrus_volume_set
+            to: "on"
+        timeout: "30"
+        continue_on_timeout: true
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cyrus_amp_startup_lock

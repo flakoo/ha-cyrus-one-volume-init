@@ -1,0 +1,82 @@
+esphome:
+  # NOTE: device name restored to the pre-split name so the HA entity ID
+  # binary_sensor.cyrus_bt_over_wifi_controller_cyrus_volume_set stays valid.
+  # Will be renamed later (requires updating HA automations).
+  name: cyrus-bt-over-wifi-controller
+  friendly_name: Cyrus BT Controller
+
+esp32:
+  variant: esp32s3
+  flash_size: 8MB
+  framework:
+    type: esp-idf
+    version: 5.5.5
+    sdkconfig_options:
+      CONFIG_BT_ENABLED: "y"
+      CONFIG_BT_NIMBLE_ENABLED: "y"
+      CONFIG_BT_NIMBLE_ROLE_CENTRAL: "y"
+      CONFIG_BT_NIMBLE_ROLE_PERIPHERAL: "n"
+      CONFIG_BT_NIMBLE_MAX_CONNECTIONS: "1"
+      CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE: "7168"
+      CONFIG_BT_NIMBLE_NVS_PERSIST_ENABLE: "n"
+
+logger:
+  level: DEBUG
+  hardware_uart: USB_CDC
+
+api:
+  encryption:
+    key: !secret api_key
+  actions:
+    - action: set_cyrus_volume
+      variables:
+        volume: int
+      then:
+        - lambda: |-
+            id(cyrus_ble_device)->request_volume(volume);
+  on_client_connected:
+    then:
+      - lambda: |-
+          id(cyrus_ble_device)->on_ha_connected();
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: Cyrus BT Controller Fallback
+    password: !secret fallback_hotspot_password
+
+captive_portal:
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [cyrus_ble]
+
+binary_sensor:
+  - platform: template
+    id: cyrus_volume_set
+    name: "Cyrus Volume Set"
+
+cyrus_ble:
+  id: cyrus_ble_device
+  status_sensor: cyrus_volume_set
+  led: light_esp32_rmt_led_strip_1
+
+# Status LED of the M5Stack Atom S3U (WS2812, GPIO35 on this board).
+light:
+  - platform: esp32_rmt_led_strip
+    channel_colors: GRB
+    name: Status LED
+    id: light_esp32_rmt_led_strip_1
+    internal: true
+    pin: GPIO35
+    chipset: WS2812
+    num_leds: 1
+    rmt_symbols: 48
+    restore_mode: RESTORE_DEFAULT_OFF
